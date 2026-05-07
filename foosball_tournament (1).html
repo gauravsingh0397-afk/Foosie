@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foosball Tournament</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #c8f026;
+    --accent2: #ff4d00;
+    --text: #f0f0f0;
+    --muted: #666;
+    --win: #c8f026;
+    --lose: #333;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* BG texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, #ffffff04 39px, #ffffff04 40px),
+                      repeating-linear-gradient(90deg, transparent, transparent 39px, #ffffff04 39px, #ffffff04 40px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
+
+  /* HEADER */
+  header { text-align: center; margin-bottom: 48px; }
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 12vw, 100px);
+    letter-spacing: 4px;
+    line-height: 1;
+    color: var(--accent);
+    text-shadow: 4px 4px 0 #5a6e00, 8px 8px 0 #2a3300;
+  }
+  header p {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  /* SECTION LABELS */
+  .section-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* STAGE BADGE */
+  .stage-badge {
+    display: inline-block;
+    background: var(--accent2);
+    color: #fff;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+
+  /* GROUPS */
+  .groups-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 40px; }
+  @media (max-width: 520px) { .groups-grid { grid-template-columns: 1fr; } }
+
+  .group-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .group-header {
+    background: var(--surface2);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .group-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+
+  /* TEAM ROW */
+  .team-row {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .team-row:last-child { border-bottom: none; }
+  .team-row:hover { background: var(--surface2); }
+
+  .team-rank {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .team-name-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid transparent;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    width: 100%;
+    outline: none;
+    padding: 2px 0;
+    transition: border-color 0.2s;
+  }
+  .team-name-input:focus { border-bottom-color: var(--accent); }
+  .team-name-input::placeholder { color: var(--muted); }
+  .team-pts {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--accent);
+    min-width: 28px;
+    text-align: right;
+  }
+  .qualify-badge {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 1px 5px;
+    border-radius: 2px;
+    display: none;
+  }
+  .qualifies .qualify-badge { display: inline-block; }
+
+  /* MATCHES */
+  .matches-section { margin-bottom: 40px; }
+  .matches-grid { display: flex; flex-direction: column; gap: 8px; }
+
+  .match-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s;
+  }
+  .match-card:hover { border-color: #3a3a3a; }
+  .match-card.completed { border-left: 3px solid var(--accent); }
+
+  .match-team { font-size: 13px; font-weight: 500; }
+  .match-team.home { text-align: right; }
+  .match-team.away { text-align: left; }
+  .match-team.winner { color: var(--accent); }
+  .match-team.loser { color: var(--muted); }
+
+  .score-area {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .score-input {
+    width: 38px;
+    height: 38px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .score-input:focus { border-color: var(--accent); }
+  .score-sep { color: var(--muted); font-size: 18px; font-family: 'Bebas Neue', sans-serif; }
+
+  .match-label { font-size: 10px; color: var(--muted); text-align: center; letter-spacing: 1px; margin-top: 4px; }
+
+  /* KNOCKOUT */
+  .knockout-section { margin-bottom: 40px; }
+
+  .ko-match {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ko-match::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent2);
+  }
+  .ko-match.final::before { background: var(--accent); width: 4px; }
+
+  .ko-match-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .ko-teams {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ko-team {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ko-team.right { align-items: flex-end; }
+
+  .ko-team-name {
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .ko-team-name.tbd { color: var(--muted); font-style: italic; }
+  .ko-team-name.winner { color: var(--accent); }
+  .ko-team-sub { font-size: 10px; color: var(--muted); }
+
+  /* FINAL */
+  .final-card {
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .final-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, #c8f02610 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .trophy { font-size: 48px; margin-bottom: 8px; display: block; }
+  .final-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 6px;
+    color: var(--accent);
+  }
+  .champion-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    color: var(--text);
+    margin-top: 16px;
+    min-height: 60px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .final-score-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .final-team-block { text-align: center; flex: 1; }
+  .final-team-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .final-team-name.tbd { color: var(--muted); font-size: 14px; font-family: 'DM Mono', monospace; font-style: italic; }
+  .final-score-input {
+    width: 60px;
+    height: 60px;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .final-score-input:focus { border-color: var(--accent); }
+  .final-vs {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: var(--muted);
+  }
+
+  /* DIVIDER */
+  .flow-arrow {
+    text-align: center;
+    color: var(--muted);
+    font-size: 20px;
+    margin: 16px 0;
+  }
+
+  /* RESET BTN */
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 32px;
+  }
+  .btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 500;
+  }
+  .btn-accent:hover { background: #b0d820; border-color: #b0d820; color: #000; }
+
+  .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
+
+  /* NOTICE */
+  .notice {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>FOOSBALL</h1>
+    <p>⚽ Tournament Bracket · 6 Teams · 2 Groups</p>
+  </header>
+
+  <!-- GROUP STAGE -->
+  <div class="section-label"><span class="stage-badge">Phase 1</span> Group Stage</div>
+
+  <div class="groups-grid">
+    <div class="group-card" id="groupA">
+      <div class="group-header">
+        <span class="group-name">Group A</span>
+        <span style="font-size:10px;color:var(--muted);letter-spacing:2px;">TOP 2 QUALIFY</span>
+      </div>
+      <!-- T1 -->
+      <div class="team-row" id="rowA1">
+        <span class="team-rank">1</span>
+        <div>
+          <input class="team-name-input" placeholder="Team 1 — Player A & B" data-team="A1" oninput="updateTeamName('A1', this.value)">
+          <span class="qualify-badge">QUALIFIES</span>
+        </div>
+        <span class="team-pts" id="ptsA1">0</span>
+      </div>
+      <!-- T2 -->
+      <div class="team-row" id="rowA2">
+        <span class="team-rank">2</span>
+        <div>
+          <input class="team-name-input" placeholder="Team 2 — Player A & B" data-team="A2" oninput="updateTeamName('A2', this.value)">
+          <span class="qualify-badge">QUALIFIES</span>
+        </div>
+        <span class="team-pts" id="ptsA2">0</span>
+      </div>
+      <!-- T3 -->
+      <div class="team-row" id="rowA3">
+        <span class="team-rank">3</span>
+        <div>
+          <input class="team-name-input" placeholder="Team 3 — Player A & B" data-team="A3" oninput="updateTeamName('A3', this.value)">
+          <span class="qualify-badge">QUALIFIES</span>
+        </div>
+        <span class="team-pts" id="ptsA3">0</span>
+      </div>
+    </div>
+
+    <div class="group-card" id="groupB">
+      <div class="group-header">
+        <span class="group-name">Group B</span>
+        <span style="font-size:10px;color:var(--muted);letter-spacing:2px;">TOP 2 QUALIFY</span>
+      </div>
+      <div class="team-row" id="rowB1">
+        <span class="team-rank">1</span>
+        <div>
+          <input class="team-name-input" placeholder="Team 4 — Player A & B" data-team="B1" oninput="updateTeamName('B1', this.value)">
+          <span class="qualify-badge">QUALIFIES</span>
+        </div>
+        <span class="team-pts" id="ptsB1">0</span>
+      </div>
+      <div class="team-row" id="rowB2">
+        <span class="team-rank">2</span>
+        <div>
+          <input class="team-name-input" placeholder="Team 5 — Player A & B" data-team="B2" oninput="updateTeamName('B2', this.value)">
+          <span class="qualify-badge">QUALIFIES</span>
+        </div>
+        <span class="team-pts" id="ptsB2">0</span>
+      </div>
+      <div class="team-row" id="rowB3">
+        <span class="team-rank">3</span>
+        <div>
+          <input class="team-name-input" placeholder="Team 6 — Player A & B" data-team="B3" oninput="updateTeamName('B3', this.value)">
+          <span class="qualify-badge">QUALIFIES</span>
+        </div>
+        <span class="team-pts" id="ptsB3">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROUP MATCHES -->
+  <div class="section-label"><span>Group Matches</span></div>
+  <div class="matches-section">
+    <div class="matches-grid">
+      <div style="font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;">Group A</div>
+      <div class="match-card" id="matchA-12">
+        <span class="match-team home" id="mA12-home">Team 1</span>
+        <div>
+          <div class="score-area">
+            <input class="score-input" id="sA12-h" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+            <span class="score-sep">:</span>
+            <input class="score-input" id="sA12-a" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+          </div>
+          <div class="match-label">A1 vs A2</div>
+        </div>
+        <span class="match-team away" id="mA12-away">Team 2</span>
+      </div>
+      <div class="match-card" id="matchA-13">
+        <span class="match-team home" id="mA13-home">Team 1</span>
+        <div>
+          <div class="score-area">
+            <input class="score-input" id="sA13-h" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+            <span class="score-sep">:</span>
+            <input class="score-input" id="sA13-a" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+          </div>
+          <div class="match-label">A1 vs A3</div>
+        </div>
+        <span class="match-team away" id="mA13-away">Team 3</span>
+      </div>
+      <div class="match-card" id="matchA-23">
+        <span class="match-team home" id="mA23-home">Team 2</span>
+        <div>
+          <div class="score-area">
+            <input class="score-input" id="sA23-h" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+            <span class="score-sep">:</span>
+            <input class="score-input" id="sA23-a" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+          </div>
+          <div class="match-label">A2 vs A3</div>
+        </div>
+        <span class="match-team away" id="mA23-away">Team 3</span>
+      </div>
+
+      <div style="font-size:10px;letter-spacing:2px;color:var(--muted);margin:12px 0 4px;text-transform:uppercase;">Group B</div>
+      <div class="match-card" id="matchB-12">
+        <span class="match-team home" id="mB12-home">Team 4</span>
+        <div>
+          <div class="score-area">
+            <input class="score-input" id="sB12-h" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+            <span class="score-sep">:</span>
+            <input class="score-input" id="sB12-a" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+          </div>
+          <div class="match-label">B1 vs B2</div>
+        </div>
+        <span class="match-team away" id="mB12-away">Team 5</span>
+      </div>
+      <div class="match-card" id="matchB-13">
+        <span class="match-team home" id="mB13-home">Team 4</span>
+        <div>
+          <div class="score-area">
+            <input class="score-input" id="sB13-h" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+            <span class="score-sep">:</span>
+            <input class="score-input" id="sB13-a" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+          </div>
+          <div class="match-label">B1 vs B3</div>
+        </div>
+        <span class="match-team away" id="mB13-away">Team 6</span>
+      </div>
+      <div class="match-card" id="matchB-23">
+        <span class="match-team home" id="mB23-home">Team 5</span>
+        <div>
+          <div class="score-area">
+            <input class="score-input" id="sB23-h" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+            <span class="score-sep">:</span>
+            <input class="score-input" id="sB23-a" type="number" min="0" max="99" placeholder="—" oninput="calcGroupScores()">
+          </div>
+          <div class="match-label">B2 vs B3</div>
+        </div>
+        <span class="match-team away" id="mB23-away">Team 6</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">↓ Top 2 from each group advance ↓</div>
+
+  <!-- SEMI FINALS -->
+  <div class="section-label" style="margin-top:24px;"><span class="stage-badge">Phase 2</span> Semi Finals</div>
+  <div class="knockout-section">
+    <div class="ko-match" id="sf1">
+      <div class="ko-match-label">SEMI FINAL 1 · A1 vs B2</div>
+      <div class="ko-teams">
+        <div class="ko-team">
+          <div class="ko-team-name tbd" id="sf1-home">TBD (A1)</div>
+          <div class="ko-team-sub">1st Group A</div>
+        </div>
+        <div>
+          <div class="score-area" style="justify-content:center;">
+            <input class="score-input" id="sSF1-h" type="number" min="0" max="99" placeholder="—" oninput="calcKnockout()">
+            <span class="score-sep">:</span>
+            <input class="score-input" id="sSF1-a" type="number" min="0" max="99" placeholder="—" oninput="calcKnockout()">
+          </div>
+          <div class="match-label">enter score</div>
+        </div>
+        <div class="ko-team right">
+          <div class="ko-team-name tbd" id="sf1-away">TBD (B2)</div>
+          <div class="ko-team-sub">2nd Group B</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ko-match" id="sf2">
+      <div class="ko-match-label">SEMI FINAL 2 · B1 vs A2</div>
+      <div class="ko-teams">
+        <div class="ko-team">
+          <div class="ko-team-name tbd" id="sf2-home">TBD (B1)</div>
+          <div class="ko-team-sub">1st Group B</div>
+        </div>
+        <div>
+          <div class="score-area" style="justify-content:center;">
+            <input class="score-input" id="sSF2-h" type="number" min="0" max="99" placeholder="—" oninput="calcKnockout()">
+            <span class="score-sep">:</span>
+            <input class="score-input" id="sSF2-a" type="number" min="0" max="99" placeholder="—" oninput="calcKnockout()">
+          </div>
+          <div class="match-label">enter score</div>
+        </div>
+        <div class="ko-team right">
+          <div class="ko-team-name tbd" id="sf2-away">TBD (A2)</div>
+          <div class="ko-team-sub">2nd Group A</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">↓ Winners advance to the Final ↓</div>
+
+  <!-- FINAL -->
+  <div class="section-label" style="margin-top:24px;"><span class="stage-badge" style="background:var(--accent);color:#000;">🏆 Final</span></div>
+  <div class="final-card">
+    <span class="trophy">🏆</span>
+    <div class="final-title">GRAND FINAL</div>
+    <div class="final-score-area">
+      <div class="final-team-block">
+        <div class="final-team-name tbd" id="final-home">TBD</div>
+        <input class="final-score-input" id="sFIN-h" type="number" min="0" max="99" placeholder="—" oninput="calcFinal()">
+      </div>
+      <div class="final-vs">VS</div>
+      <div class="final-team-block">
+        <div class="final-team-name tbd" id="final-away">TBD</div>
+        <input class="final-score-input" id="sFIN-a" type="number" min="0" max="99" placeholder="—" oninput="calcFinal()">
+      </div>
+    </div>
+    <div class="champion-name" id="champion-name"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" onclick="resetAll()">↺ Reset Tournament</button>
+  </div>
+  <p class="notice">Scores update standings automatically · Win = 3pts · Draw = 1pt</p>
+</div>
+
+<script>
+  // State
+  const teams = {
+    A1: 'Team 1', A2: 'Team 2', A3: 'Team 3',
+    B1: 'Team 4', B2: 'Team 5', B3: 'Team 6'
+  };
+
+  // Qualified teams (keys)
+  let qualified = { A1: null, A2: null, B1: null, B2: null };
+
+  function updateTeamName(key, val) {
+    teams[key] = val || key;
+    refreshTeamLabels();
+    calcGroupScores();
+  }
+
+  function refreshTeamLabels() {
+    // Match labels
+    document.getElementById('mA12-home').textContent = teams.A1;
+    document.getElementById('mA12-away').textContent = teams.A2;
+    document.getElementById('mA13-home').textContent = teams.A1;
+    document.getElementById('mA13-away').textContent = teams.A3;
+    document.getElementById('mA23-home').textContent = teams.A2;
+    document.getElementById('mA23-away').textContent = teams.A3;
+    document.getElementById('mB12-home').textContent = teams.B1;
+    document.getElementById('mB12-away').textContent = teams.B2;
+    document.getElementById('mB13-home').textContent = teams.B1;
+    document.getElementById('mB13-away').textContent = teams.B3;
+    document.getElementById('mB23-home').textContent = teams.B2;
+    document.getElementById('mB23-away').textContent = teams.B3;
+  }
+
+  function getScore(id) {
+    const v = document.getElementById(id).value;
+    return v === '' ? null : parseInt(v);
+  }
+
+  function calcGroupScores() {
+    const pts = { A1:0, A2:0, A3:0, B1:0, B2:0, B3:0 };
+
+    function award(h, a, sh, sa) {
+      if (sh === null || sa === null) return;
+      if (sh > sa) { pts[h] += 3; }
+      else if (sa > sh) { pts[a] += 3; }
+      else { pts[h] += 1; pts[a] += 1; }
+    }
+
+    award('A1','A2', getScore('sA12-h'), getScore('sA12-a'));
+    award('A1','A3', getScore('sA13-h'), getScore('sA13-a'));
+    award('A2','A3', getScore('sA23-h'), getScore('sA23-a'));
+    award('B1','B2', getScore('sB12-h'), getScore('sB12-a'));
+    award('B1','B3', getScore('sB13-h'), getScore('sB13-a'));
+    award('B2','B3', getScore('sB23-h'), getScore('sB23-a'));
+
+    ['A1','A2','A3','B1','B2','B3'].forEach(k => {
+      document.getElementById('pts'+k).textContent = pts[k];
+    });
+
+    // Sort groups
+    const groupA = ['A1','A2','A3'].sort((a,b) => pts[b]-pts[a]);
+    const groupB = ['B1','B2','B3'].sort((a,b) => pts[b]-pts[a]);
+
+    // Update row ranks
+    updateGroupOrder('groupA', groupA, pts);
+    updateGroupOrder('groupB', groupB, pts);
+
+    // Set qualified
+    qualified.A1 = groupA[0]; qualified.A2 = groupA[1];
+    qualified.B1 = groupB[0]; qualified.B2 = groupB[1];
+
+    // Update semi final labels
+    const sf1h = document.getElementById('sf1-home');
+    const sf1a = document.getElementById('sf1-away');
+    const sf2h = document.getElementById('sf2-home');
+    const sf2a = document.getElementById('sf2-away');
+
+    sf1h.textContent = teams[qualified.A1] || 'TBD (A1)';
+    sf1h.classList.toggle('tbd', !qualified.A1);
+    sf1a.textContent = teams[qualified.B2] || 'TBD (B2)';
+    sf1a.classList.toggle('tbd', !qualified.B2);
+    sf2h.textContent = teams[qualified.B1] || 'TBD (B1)';
+    sf2h.classList.toggle('tbd', !qualified.B1);
+    sf2a.textContent = teams[qualified.A2] || 'TBD (A2)';
+    sf2a.classList.toggle('tbd', !qualified.A2);
+
+    calcKnockout();
+  }
+
+  function updateGroupOrder(groupId, order, pts) {
+    const card = document.getElementById(groupId);
+    const rows = card.querySelectorAll('.team-row');
+    rows.forEach((row, i) => {
+      const key = order[i];
+      const input = row.querySelector('.team-name-input');
+      const ptsEl = row.querySelector('.team-pts');
+      const badge = row.querySelector('.qualify-badge');
+      const rank = row.querySelector('.team-rank');
+      input.dataset.team = key;
+      // Update displayed name (don't overwrite if user is editing)
+      if (document.activeElement !== input) {
+        input.value = input.value !== '' ? input.value : '';
+        // Reflect actual team name in placeholder
+        input.placeholder = `${key} — Player A & B`;
+      }
+      ptsEl.id = 'pts'+key;
+      ptsEl.textContent = pts[key];
+      rank.textContent = i+1;
+      row.id = 'row'+key;
+      if (i < 2) { row.classList.add('qualifies'); }
+      else { row.classList.remove('qualifies'); }
+    });
+  }
+
+  function calcKnockout() {
+    const sf1h = getScore('sSF1-h'), sf1a = getScore('sSF1-a');
+    const sf2h = getScore('sSF2-h'), sf2a = getScore('sSF2-a');
+
+    let finalistA = null, finalistB = null;
+
+    if (sf1h !== null && sf1a !== null) {
+      finalistA = sf1h >= sf1a ? qualified.A1 : qualified.B2;
+      // highlight
+      document.getElementById('sf1-home').classList.toggle('winner', sf1h > sf1a);
+      document.getElementById('sf1-away').classList.toggle('winner', sf1a > sf1h);
+      document.getElementById('sf1-home').classList.toggle('loser', sf1h < sf1a);
+      document.getElementById('sf1-away').classList.toggle('loser', sf1a < sf1h);
+    }
+    if (sf2h !== null && sf2a !== null) {
+      finalistB = sf2h >= sf2a ? qualified.B1 : qualified.A2;
+      document.getElementById('sf2-home').classList.toggle('winner', sf2h > sf2a);
+      document.getElementById('sf2-away').classList.toggle('winner', sf2a > sf2h);
+      document.getElementById('sf2-home').classList.toggle('loser', sf2h < sf2a);
+      document.getElementById('sf2-away').classList.toggle('loser', sf2a < sf2h);
+    }
+
+    const fh = document.getElementById('final-home');
+    const fa = document.getElementById('final-away');
+    fh.textContent = finalistA ? teams[finalistA] : 'TBD';
+    fh.classList.toggle('tbd', !finalistA);
+    fa.textContent = finalistB ? teams[finalistB] : 'TBD';
+    fa.classList.toggle('tbd', !finalistB);
+
+    window._finalistA = finalistA;
+    window._finalistB = finalistB;
+
+    calcFinal();
+  }
+
+  function calcFinal() {
+    const fh = getScore('sFIN-h'), fa = getScore('sFIN-a');
+    const champEl = document.getElementById('champion-name');
+    if (fh !== null && fa !== null && (window._finalistA || window._finalistB)) {
+      const winner = fh >= fa ? window._finalistA : window._finalistB;
+      if (winner) {
+        champEl.textContent = '🥇 ' + teams[winner];
+        document.getElementById('final-home').classList.toggle('winner', fh > fa);
+        document.getElementById('final-away').classList.toggle('winner', fa > fh);
+      }
+    } else {
+      champEl.textContent = '';
+    }
+  }
+
+  function resetAll() {
+    if (!confirm('Reset the entire tournament? All scores will be cleared.')) return;
+    document.querySelectorAll('.score-input, .final-score-input').forEach(el => el.value = '');
+    document.querySelectorAll('.team-name-input').forEach(el => { el.value = ''; });
+    document.querySelectorAll('.winner, .loser').forEach(el => {
+      el.classList.remove('winner','loser');
+    });
+    document.getElementById('champion-name').textContent = '';
+    ['sf1-home','sf1-away','sf2-home','sf2-away'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.add('tbd');
+    });
+    document.getElementById('final-home').textContent = 'TBD';
+    document.getElementById('final-home').classList.add('tbd');
+    document.getElementById('final-away').textContent = 'TBD';
+    document.getElementById('final-away').classList.add('tbd');
+    Object.keys(teams).forEach(k => { teams[k] = k; });
+    calcGroupScores();
+    refreshTeamLabels();
+  }
+
+  // Init
+  refreshTeamLabels();
+  calcGroupScores();
+</script>
+</body>
+</html>
